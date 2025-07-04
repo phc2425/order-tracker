@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Order Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .form-container, .table-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Customer Order Tracker</h1>
+    <div class="form-container">
+        <form id="orderForm">
+            <label for="customerName">Customer Name:</label>
+            <input type="text" id="customerName" required>
+
+            <label for="mobile">Mobile:</label>
+            <input type="text" id="mobile" required>
+
+            <label for="address">Address:</label>
+            <textarea id="address" required></textarea>
+
+            <label for="date">Date:</label>
+            <input type="date" id="date" required>
+
+            <label for="products">Products:</label>
+            <textarea id="products" required></textarea>
+
+            <label for="payment">Payment:</label>
+            <select id="payment" required>
+                <option value="COD">COD</option>
+                <option value="Paid">Paid</option>
+            </select>
+
+            <label for="deliveryStatus">Delivery Status:</label>
+            <select id="deliveryStatus" required>
+                <option value="Sent">Sent</option>
+                <option value="Shipped">Shipped</option>
+                <option value="Completed">Completed</option>
+            </select>
+
+            <button type="submit">Add Order</button>
+        </form>
+    </div>
+
+    <div class="table-container">
+        <table id="orderTable">
+            <thead>
+                <tr>
+                    <th>Customer Name</th>
+                    <th>Mobile</th>
+                    <th>Address</th>
+                    <th>Date</th>
+                    <th>Products</th>
+                    <th>Payment</th>
+                    <th>Delivery Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="orderTableBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbytAmZ_UJtMdZj_0x6gFb9X0shgansqVF_Ack2aDuPoZqlyiPHF4Z0y1k9izSHWLTO5/exec';
+        const form = document.getElementById('orderForm');
+        const orderTableBody = document.getElementById('orderTableBody');
+
+        // Load existing orders when the page loads
+        window.onload = function() {
+            fetch(scriptURL)
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(order => addOrderToTable(order));
+                })
+                .catch(error => console.error('Error loading orders:', error));
+        };
+
+        // Handle form submission
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            const orderData = {
+                action: 'add',
+                customerName: document.getElementById('customerName').value,
+                mobile: document.getElementById('mobile').value,
+                address: document.getElementById('address').value,
+                date: document.getElementById('date').value,
+                products: document.getElementById('products').value,
+                payment: document.getElementById('payment').value,
+                deliveryStatus: document.getElementById('deliveryStatus').value
+            };
+
+            fetch(scriptURL, {
+                method: 'POST',
+                body: JSON.stringify(orderData),
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        addOrderToTable({
+                            orderId: data.orderId,
+                            customerName: orderData.customerName,
+                            mobile: orderData.mobile,
+                            address: orderData.address,
+                            date: orderData.date,
+                            products: orderData.products,
+                            payment: orderData.payment,
+                            deliveryStatus: orderData.deliveryStatus
+                        });
+                        form.reset();
+                    } else {
+                        alert('Error adding order');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error adding order');
+                });
+        });
+
+        // Function to add order to table
+        function addOrderToTable(order) {
+            const row = document.createElement('tr');
+            row.setAttribute('data-order-id', order.orderId);
+            row.innerHTML = `
+                <td>${order.customerName}</td>
+                <td>${order.mobile}</td>
+                <td>${order.address}</td>
+                <td>${order.date}</td>
+                <td>${order.products}</td>
+                <td>${order.payment}</td>
+                <td>${order.deliveryStatus}</td>
+                <td><button class="delete-btn" onclick="deleteOrder('${order.orderId}')">Delete</button></td>
+            `;
+            orderTableBody.appendChild(row);
+        }
+
+        // Function to delete order
+        function deleteOrder(orderId) {
+            if (confirm('Are you sure you want to delete this order?')) {
+                fetch(scriptURL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'delete', orderId: orderId }),
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            const row = document.querySelector(`tr[data-order-id="${orderId}"]`);
+                            row.remove();
+                        } else {
+                            alert('Error deleting order');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error deleting order');
+                    });
+            }
+        }
+    </script>
+</body>
+</html>
